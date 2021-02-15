@@ -1687,6 +1687,10 @@ extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measuremen
 extern cvar_t	*r_lodbias;				// push/pull LOD transitions
 extern cvar_t	*r_lodscale;
 
+#ifdef USE_LAZY_LOAD
+extern cvar_t	*r_lazyLoad;
+#endif
+
 extern cvar_t	*r_fastsky;				// controls whether sky should be cleared or drawn
 extern cvar_t	*r_drawSun;				// controls drawing of sun quad
 extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
@@ -1990,6 +1994,10 @@ shader_t *R_FindShaderByName( const char *name );
 void		R_InitShaders( void );
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
+#ifdef USE_LAZY_LOAD
+void	  R_UpdateModel( const char *name );
+void 		RE_UpdateShader( char *shaderName, int lightmapIndex );
+#endif
 
 /*
 ====================================================================

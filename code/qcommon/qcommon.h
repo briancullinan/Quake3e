@@ -55,6 +55,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 //============================================================================
 
+#ifdef USE_LAZY_LOAD
+char *Sys_UpdateShader( void );
+char *Sys_UpdateSound( void );
+char *Sys_UpdateModel( void );
+void Sys_FileReady(char *filename);
+#endif
+
 //
 // msg.c
 //

@@ -56,6 +56,9 @@ void S_Update( int msec );
 
 void S_DisableSounds( void );
 
+#ifdef USE_LAZY_LOAD
+void S_UpdateSound( char *name, qboolean compressed );
+#endif
 void S_BeginRegistration( void );
 
 // RegisterSound will allways return a valid sample, even if it

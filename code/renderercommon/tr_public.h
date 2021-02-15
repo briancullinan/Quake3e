@@ -121,6 +121,10 @@ typedef struct {
 	void	(*VertexLighting)( qboolean allowed );
 	void	(*SyncRender)( void );
 
+#ifdef USE_LAZY_LOAD
+	void (*UpdateModel)(const char *name);
+	void (*UpdateShader)(char *shaderName, int lightmapIndex);
+#endif
 
 } refexport_t;
 

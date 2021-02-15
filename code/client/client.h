@@ -554,6 +554,12 @@ void CIN_CloseAllVideos(void);
 //
 // cl_cgame.c
 //
+#ifdef USE_LAZY_LOAD
+// TODO: make these work on native, by checking files.c for rediness or something?
+void CL_UpdateShader( void );
+void CL_UpdateSound( void );
+void CL_UpdateModel( void );
+#endif
 void CL_InitCGame( void );
 void CL_ShutdownCGame( void );
 qboolean CL_GameCommand( void );

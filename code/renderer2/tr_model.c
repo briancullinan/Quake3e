@@ -250,10 +250,15 @@ optimization to prevent disk rescanning if they are
 asked for again.
 ====================
 */
+#ifdef USE_LAZY_LOAD
+qhandle_t RE_RegisterModel_Internal( const char *name, qboolean updateModels ) {
+#else
 qhandle_t RE_RegisterModel( const char *name ) {
+#endif
+;
 	model_t		*mod;
 	qhandle_t	hModel;
-	qboolean	orgNameFailed = qfalse;
+	qboolean	orgNameFailed = qfalse, found = qfalse;
 	int			orgLoader = -1;
 	int			i;
 	char		localName[ MAX_QPATH ];
@@ -276,16 +281,18 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	for ( hModel = 1 ; hModel < tr.numModels; hModel++ ) {
 		mod = tr.models[hModel];
 		if ( !strcmp( mod->name, name ) ) {
-			if( mod->type == MOD_BAD ) {
-				return 0;
+			found = qtrue;
+			if( mod->type != MOD_BAD ) {
+				return mod->index;
+			} else {
+				break;
 			}
-			return hModel;
 		}
 	}
 
 	// allocate a new model_t
 
-	if ( ( mod = R_AllocModel() ) == NULL ) {
+	if ( !found && ( mod = R_AllocModel() ) == NULL ) {
 		ri.Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
 		return 0;
 	}
@@ -303,6 +310,8 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	// load the files
 	//
 	Q_strncpyz( localName, name, sizeof( localName ) );
+	
+	ri.Cvar_Set("r_loadingModel", name);
 
 	ext = COM_GetExtension( localName );
 
@@ -314,7 +323,16 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			if( !Q_stricmp( ext, modelLoaders[ i ].ext ) )
 			{
 				// Load
-				hModel = modelLoaders[ i ].ModelLoader( localName, mod );
+#ifdef USE_LAZY_LOAD
+				if ( !updateModels ) {
+					if(ri.FS_FOpenFileRead(localName, NULL, qfalse)) {
+						hModel = 0;
+					}
+				} else 
+#endif
+				{
+					hModel = modelLoaders[ i ].ModelLoader( localName, mod );
+				}
 				break;
 			}
 		}
@@ -348,7 +366,16 @@ qhandle_t RE_RegisterModel( const char *name ) {
 		Com_sprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
 
 		// Load
-		hModel = modelLoaders[ i ].ModelLoader( altName, mod );
+#ifdef USE_LAZY_LOAD
+		if ( !updateModels ) {
+			if(ri.FS_FOpenFileRead(altName, NULL, qfalse)) {
+				hModel = 0;
+			}
+		} else 
+#endif
+		{
+			hModel = modelLoaders[ i ].ModelLoader( altName, mod );
+		}
 
 		if( hModel )
 		{
@@ -362,8 +389,22 @@ qhandle_t RE_RegisterModel( const char *name ) {
 		}
 	}
 
-	return hModel;
+	
+	ri.Cvar_Set("r_loadingModel", "");
+
+	return mod->index;
 }
+
+#ifdef USE_LAZY_LOAD
+qhandle_t RE_RegisterModel( const char *name ) {
+	return RE_RegisterModel_Internal( name, r_lazyLoad->integer < 2 );
+}
+
+void R_UpdateModel( const char *name )
+{
+	RE_RegisterModel_Internal( name, qtrue );
+}
+#endif
 
 /*
 =================

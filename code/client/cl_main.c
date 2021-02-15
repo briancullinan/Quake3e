@@ -69,6 +69,10 @@ cvar_t	*cl_guidServerUniq;
 cvar_t	*cl_dlURL;
 cvar_t	*cl_dlDirectory;
 
+#ifdef USE_LAZY_LOAD
+cvar_t  *cl_lazyLoad;
+#endif
+
 // common cvars for GLimp modules
 cvar_t	*vid_xpos;			// X coordinate of window position
 cvar_t	*vid_ypos;			// Y coordinate of window position
@@ -2964,6 +2968,10 @@ static void CL_CheckUserinfo( void ) {
 CL_Frame
 ==================
 */
+#ifdef USE_LAZY_LOAD
+static int secondTimer = 0;
+static int thirdTimer = 0;
+#endif
 void CL_Frame( int msec, int realMsec ) {
 	float fps;
 	float frameDuration;
@@ -2980,6 +2988,29 @@ void CL_Frame( int msec, int realMsec ) {
 
 	// save the msec before checking pause
 	cls.realFrametime = realMsec;
+
+#ifdef USE_LAZY_LOAD
+	// TODO: from WASP.sk, only load when a warmup or a dead state is detected
+	//   cl_lazyLoad 2 option is just like 1 except only during downtime, 
+	//   cl_lazyLoad 3 is force lazy loading everytime
+	if(cl_lazyLoad->integer > 0) {
+		if((uivm || cgvm) && secondTimer > 20) {
+			secondTimer = 0;
+			CL_UpdateShader();
+		} else {
+			secondTimer += msec;
+		}
+		if((uivm || cgvm) && thirdTimer > 100) {
+			thirdTimer = 0;
+			if(cls.soundRegistered) { // && !cls.firstClick) {
+				CL_UpdateSound();
+			}
+			CL_UpdateModel();
+		} else {
+			thirdTimer += msec;
+		}
+	}
+#endif
 
 #ifdef USE_CURL
 	if ( clc.downloadCURLM ) {
@@ -3866,6 +3897,11 @@ void CL_Init( void ) {
 	cl_lanForcePackets = Cvar_Get( "cl_lanForcePackets", "1", CVAR_ARCHIVE_ND );
 
 	cl_guidServerUniq = Cvar_Get( "cl_guidServerUniq", "1", CVAR_ARCHIVE_ND );
+
+#ifdef USE_LAZY_LOAD
+	cl_lazyLoad = Cvar_Get( "cl_lazyLoad", "0", CVAR_ARCHIVE | CVAR_TEMP );
+	Cvar_SetDescription( cl_lazyLoad, "Download graphics over the network after the level loads\n1 - Load available graphics immediately, and missing graphics as they become available\n2 - Don't load any graphics immediately\n4 - Only load graphics during downtimes, intermission, respawn timeout, while spectating\nDefault: 0" );
+#endif
 
 	cl_dlURL = Cvar_Get( "cl_dlURL", "http://ws.q3df.org/maps/download/%1", CVAR_ARCHIVE_ND );
 	

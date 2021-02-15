@@ -26,6 +26,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static snd_codec_t *codecs;
 
+#ifdef USE_LAZY_LOAD
+qboolean updateSound = qfalse;
+cvar_t *s_lazyLoad;
+void S_UpdateSound(char *name, qboolean compressed)
+{
+	updateSound = qtrue;
+	
+	S_RegisterSound(name, compressed);
+	
+	updateSound = s_lazyLoad->integer < 2;
+}
+#endif
+
 /*
 =================
 S_CodecGetSound
@@ -56,11 +69,20 @@ static void *S_CodecGetSound(const char *filename, snd_info_t *info)
 			if( !Q_stricmp( ext, codec->ext ) )
 			{
 				// Load
-				if( info )
-					rtn = codec->load(localName, info);
-				else
-					rtn = codec->open(localName);
-				break;
+#ifdef USE_LAZY_LOAD
+				if(!updateSound) {
+					if(FS_FOpenFileRead(localName, NULL, qfalse) > -1) {
+						return NULL;
+					}
+				} else 
+#endif
+				{
+					if( info )
+						rtn = codec->load(localName, info);
+					else
+						rtn = codec->open(localName);
+					break;
+				}
 			}
 		}
 
@@ -93,10 +115,19 @@ static void *S_CodecGetSound(const char *filename, snd_info_t *info)
 		Com_sprintf( altName, sizeof (altName), "%s.%s", localName, codec->ext );
 
 		// Load
-		if( info )
-			rtn = codec->load(altName, info);
-		else
-			rtn = codec->open(altName);
+#ifdef USE_LAZY_LOAD
+		if(!updateSound) {
+			if(FS_FOpenFileRead(altName, NULL, qfalse) > -1) {
+				return NULL;
+			}
+		} else 
+#endif
+		{
+			if( info )
+				rtn = codec->load(altName, info);
+			else
+				rtn = codec->open(altName);
+		}
 
 		if( rtn )
 		{
@@ -128,6 +159,13 @@ void S_CodecInit()
 #endif
 	// Register wav codec last so that it is always tried first when a file extension was not found
 	S_CodecRegister(&wav_codec);
+
+#ifdef USE_LAZY_LOAD
+	s_lazyLoad = Cvar_Get( "cl_lazyLoad", "0", 0 );
+	Cvar_Get("snd_loadingSound", "", CVAR_TEMP);
+	updateSound = s_lazyLoad->integer < 2;
+#endif
+
 }
 
 /*
