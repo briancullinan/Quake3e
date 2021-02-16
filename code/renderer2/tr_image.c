@@ -2088,6 +2088,39 @@ static void Upload32(byte *data, int x, int y, int width, int height, GLenum pic
 
 
 /*
+======================
+S_FreeOldestSound
+======================
+*/
+image_t *R_FreeOldestImage( void ) {
+	int	i, oldest, used;
+	image_t	*image;
+
+	oldest = ri.Milliseconds();
+	used = 0;
+
+	for ( i = 1 ; i < tr.numImages ; i++ ) {
+		image = tr.images[i];
+		if ( (!image->lastTimeUsed || !image->texnum || image->lastTimeUsed - oldest < 0)
+			&& image->imgName[0] != '*'
+		 	&& image->lastTimeUsed < tr.lastRegistrationTime) {
+			used = i;
+			oldest = image->lastTimeUsed;
+		}
+	}
+
+	image = tr.images[used];
+	
+	ri.Printf(PRINT_DEVELOPER, "R_FreeOldestImage: freeing image %s\n", image->imgName);
+	
+	if(image->texnum)
+		qglDeleteTextures( 1, &image->texnum );
+	Com_Memset(image, 0, sizeof( *image ));
+	
+	return image;
+}
+
+/*
 ================
 R_CreateImage2
 
@@ -2118,10 +2151,13 @@ image_t *R_CreateImage2( const char *name, byte *pic, int width, int height, GLe
 	}
 
 	if ( tr.numImages == MAX_DRAWIMAGES ) {
-		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit");
-	}
-
-	image = tr.images[tr.numImages] = ri.Hunk_Alloc( sizeof( *image ) + namelen + 1, h_low );
+		image = R_FreeOldestImage();
+		if(!image) {
+			ri.Printf( PRINT_WARNING, "R_CreateImage: MAX_DRAWIMAGES hit");
+			return NULL;
+		}
+	} else
+		image = tr.images[tr.numImages] = ri.Hunk_Alloc( sizeof( *image ) + namelen + 1, h_low );
 	qglGenTextures(1, &image->texnum);
 	tr.numImages++;
 
@@ -2141,6 +2177,7 @@ image_t *R_CreateImage2( const char *name, byte *pic, int width, int height, GLe
 	if (!internalFormat)
 		internalFormat = RawImage_GetFormat(pic, width * height, picFormat, isLightmap, image->type, image->flags);
 
+	image->lastTimeUsed = tr.lastRegistrationTime;
 	image->internalFormat = internalFormat;
 
 	// Possibly scale image before uploading.
@@ -2287,7 +2324,7 @@ Loads any of the supported image types into a canonical
 32 bit format.
 =================
 */
-void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum *picFormat, int *numMips )
+void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum *picFormat, int *numMips, qboolean checkOnly )
 {
 	qboolean orgNameFailed = qfalse;
 	int orgLoader = -1;
@@ -2296,6 +2333,9 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 	const char *ext;
 	const char *altName;
 
+	if(!name || strlen(name) == 0) {
+		return;
+	}
 	*pic = NULL;
 	*width = 0;
 	*height = 0;
@@ -2314,7 +2354,13 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 		COM_StripExtension(name, ddsName, MAX_QPATH);
 		Q_strcat(ddsName, MAX_QPATH, ".dds");
 
-		R_LoadDDS(ddsName, pic, width, height, picFormat, numMips);
+		if(checkOnly) {
+			if ( ri.FS_FOpenFileRead(ddsName, NULL, qfalse) > -1 ) {
+				return;
+			}
+		} else {
+			R_LoadDDS(ddsName, pic, width, height, picFormat, numMips);
+		}
 
 		// If loaded, we're done.
 		if (*pic)
@@ -2329,7 +2375,13 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 			if( !Q_stricmp( ext, imageLoaders[ i ].ext ) )
 			{
 				// Load
-				imageLoaders[ i ].ImageLoader( localName, pic, width, height );
+				if(checkOnly) {
+					if ( ri.FS_FOpenFileRead(localName, NULL, qfalse) > -1 ) {
+						return;
+					}
+				} else {
+					imageLoaders[ i ].ImageLoader( localName, pic, width, height );
+				}
 				break;
 			}
 		}
@@ -2363,14 +2415,20 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 		altName = va( "%s.%s", localName, imageLoaders[ i ].ext );
 
 		// Load
-		imageLoaders[ i ].ImageLoader( altName, pic, width, height );
+		if(checkOnly) {
+			if ( ri.FS_FOpenFileRead(altName, NULL, qfalse) > -1 ) {
+				return;
+			}
+		} else {
+			imageLoaders[ i ].ImageLoader( altName, pic, width, height );
+		}
 
 		if( *pic )
 		{
 			if( orgNameFailed )
 			{
-				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
-						name, altName );
+				//ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
+				//		name, altName );
 			}
 
 			break;
@@ -2397,7 +2455,7 @@ image_t	*R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags )
 	long	hash;
 	imgFlags_t checkFlagsTrue, checkFlagsFalse;
 
-	if (!name) {
+	if (!name || !name[0]) {
 		return NULL;
 	}
 
@@ -2414,6 +2472,7 @@ image_t	*R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags )
 					ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed flags (%i vs %i)\n", name, image->flags, flags );
 				}
 			}
+			image->lastTimeUsed = tr.lastRegistrationTime;
 			return image;
 		}
 	}
@@ -2421,7 +2480,7 @@ image_t	*R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags )
 	//
 	// load the pic from disk
 	//
-	R_LoadImage( name, &pic, &width, &height, &picFormat, &picNumMips );
+	R_LoadImage( name, &pic, &width, &height, &picFormat, &picNumMips, qfalse );
 	if ( pic == NULL ) {
 		return NULL;
 	}

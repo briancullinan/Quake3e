@@ -40,6 +40,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #elif defined( __linux__ ) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined( __sun )
 #include <GL/gl.h>
 #include <GL/glx.h>
+#elif defined(__APPLE__) || defined(__APPLE_CC__)
+#include <SDL_opengl.h>
+#include <SDL_opengl_glext.h>
 #endif
 
 #ifndef APIENTRY

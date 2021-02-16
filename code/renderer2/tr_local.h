@@ -436,6 +436,7 @@ typedef struct {
 
 typedef struct shader_s {
 	char		name[MAX_QPATH];		// game path, including extension
+	int     lastTimeUsed;
 	int			lightmapSearchIndex;	// for a shader to match, both name and lightmapIndex must match
 	int			lightmapIndex;			// for rendering
 
@@ -450,6 +451,8 @@ typedef struct shader_s {
 										// something calls RE_RegisterShader again with
 										// the same name, we don't try looking for it again
 
+	qboolean	noVertexLightingCollapse;
+	qboolean  allowCompress;
 	qboolean	explicitlyDefined;		// found in a .shader file
 
 	int			surfaceFlags;			// if explicitlyDefined, this will have SURF_* flags
@@ -1484,6 +1487,7 @@ typedef struct {
 */
 typedef struct {
 	qboolean				registered;		// cleared at shutdown, set at beginRegistration
+	int							lastRegistrationTime;
 
 	int						visIndex;
 	int						visClusters[MAX_VISCOUNTS];
@@ -1954,7 +1958,7 @@ void		RE_LoadWorldMap( const char *mapname );
 void		RE_SetWorldVisData( const byte *vis );
 qhandle_t	RE_RegisterModel( const char *name );
 qhandle_t	RE_RegisterSkin( const char *name );
-void		RE_Shutdown( int destroyWindow );
+void		RE_Shutdown( refShutdownCode_t code );
 
 qboolean	R_GetEntityToken( char *buffer, int size );
 
@@ -1995,6 +1999,7 @@ void		R_InitShaders( void );
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
 #ifdef USE_LAZY_LOAD
+shader_t *R_FindDefaultShaderByName( const char *name );
 void	  R_UpdateModel( const char *name );
 void 		RE_UpdateShader( char *shaderName, int lightmapIndex );
 #endif

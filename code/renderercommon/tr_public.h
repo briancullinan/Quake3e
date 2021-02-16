@@ -230,6 +230,10 @@ typedef struct {
 	void*	(*VK_GetInstanceProcAddr)( VkInstance instance, const char *name );
 	qboolean (*VK_CreateSurface)( VkInstance instance, VkSurfaceKHR *pSurface );
 
+#ifdef USE_LAZY_LOAD
+	int   (*FS_FOpenFileRead)( const char *filename, fileHandle_t *file, qboolean uniqueFILE );
+#endif
+
 } refimport_t;
 
 extern	refimport_t	ri;
