@@ -615,6 +615,11 @@ static void Cvar_Print( const cvar_t *v ) {
 }
 
 
+#ifndef DEDICATED
+#ifdef USE_CVAR_UNCHEAT
+extern cvar_t *clUncheats[128];
+#endif
+#endif
 /*
 ============
 Cvar_Set2
@@ -649,6 +654,20 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 		else
 			return Cvar_Get( var_name, value, 0 );
 	}
+
+#ifndef DEDICATED
+#ifdef USE_CVAR_UNCHEAT
+  if(var->flags & CVAR_CHEAT) {
+    for(int i = 0; i < ARRAY_LEN(clUncheats); i++) {
+      if(clUncheats[i] == var) {
+        var->flags &= ~CVAR_CHEAT;
+        var->flags |= CVAR_USERINFO;
+        //var->flags |= CVAR_UNCHEATED;
+      }
+    }
+  }
+#endif
+#endif
 
 	if ( var->flags & (CVAR_ROM | CVAR_INIT | CVAR_CHEAT | CVAR_DEVELOPER) && !force )
 	{

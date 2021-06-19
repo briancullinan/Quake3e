@@ -93,6 +93,11 @@ cvar_t *cl_stencilbits;
 cvar_t *cl_depthbits;
 cvar_t *cl_drawBuffer;
 
+#ifdef USE_CVAR_UNCHEAT
+cvar_t  *cl_uncheat;
+cvar_t  *clUncheats[128];
+#endif
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -3840,6 +3845,19 @@ void CL_Init( void ) {
 		CVAR_ARCHIVE );
 
 	rconAddress = Cvar_Get ("rconAddress", "", 0);
+
+#ifdef USE_CVAR_UNCHEAT
+  cl_uncheat = Cvar_Get("cl_uncheat", "cg_gun cg_gunX cg_gunY cg_gunZ", CVAR_ARCHIVE | CVAR_USERINFO);
+  Cvar_SetDescription(cl_uncheat, "Remove the CVAR_CHEAT flag from any cvar, shares this info with server for banning\nit also shares the cheat value so server administrators can see and log it\nDefault: cg_gun cg_gunX cg_gunY cg_gunZ");
+  int cheatCount = 0;
+  char *cheats = Cmd_TokenizeAlphanumeric(cl_uncheat->string, &cheatCount);
+  for(int i = 0; i < cheatCount && i < 128; i++) {
+    if(cheats[0] == '\0') continue;
+    // set userinfo on all the cheated values
+    clUncheats[i] = Cvar_Get(cheats, "", CVAR_USERINFO);
+    cheats = &cheats[strlen(cheats)+1];
+  }
+#endif
 
 	cl_allowDownload = Cvar_Get( "cl_allowDownload", "1", CVAR_ARCHIVE_ND );
 #ifdef USE_CURL

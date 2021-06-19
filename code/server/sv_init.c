@@ -757,6 +757,19 @@ void SV_Init( void )
 	sv_mapChecksum = Cvar_Get ("sv_mapChecksum", "", CVAR_ROM);
 	sv_lanForceRate = Cvar_Get ("sv_lanForceRate", "1", CVAR_ARCHIVE_ND );
 
+#ifdef USE_CVAR_UNCHEAT
+  // TODO: set default to all client values with CVAR_CHEAT
+  sv_banCheats = Cvar_Get("sv_banCheats", "", CVAR_ARCHIVE | CVAR_USERINFO);
+  Cvar_SetDescription(sv_banCheats, "Ban specific cheat values allowed by cl_uncheat setting\ne.g. cg_fov used to see behind you\nDefault: empty");
+  int cheatCount;
+  char *cheats = Cmd_TokenizeAlphanumeric(sv_banCheats->string, &cheatCount);
+  for(int i = 0; i < cheatCount && i < 128; i++) {
+    // set userinfo on all the cheated values
+    svUncheats[i] = CopyString(cheats);
+    cheats = &cheats[strlen(cheats)+1];
+  }
+#endif
+
 #ifdef USE_BANS
 	sv_banFile = Cvar_Get("sv_banFile", "serverbans.dat", CVAR_ARCHIVE);
 #endif

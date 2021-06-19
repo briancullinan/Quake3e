@@ -306,6 +306,11 @@ extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t *sv_levelTimeReset;
 extern	cvar_t *sv_filter;
 
+#ifdef USE_CVAR_UNCHEAT
+extern  cvar_t  *sv_banCheats;
+extern  char    *svUncheats[128];
+#endif
+
 #ifdef USE_BANS
 extern	cvar_t	*sv_banFile;
 extern	serverBan_t serverBans[SERVER_MAXBANS];

@@ -63,6 +63,11 @@ serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
 #endif
 
+#ifdef USE_CVAR_UNCHEAT
+cvar_t  *sv_banCheats;
+char    *svUncheats[128];
+#endif
+
 /*
 =============================================================================
 
