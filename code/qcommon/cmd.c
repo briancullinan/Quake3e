@@ -959,7 +959,7 @@ char *Cmd_TokenizeAlphanumeric(const char *text_in, int *count) {
 		}
 		c++;
 	}
-	if(*count == 0 && r > 0 && props[r-1] != 0) {
+	if(r > 0 && props[r-1] != 0) {
 		props[r] = 0;
 		(*count)++;
 		r++;
