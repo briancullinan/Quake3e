@@ -674,6 +674,20 @@ void SV_SpawnServer( const char *mapname, qboolean killBots ) {
 }
 
 
+#ifdef USE_CVAR_UNCHEAT
+void SV_InitBanCheats( void ) {
+  int cheatCount;
+  char *cheats = Cmd_TokenizeAlphanumeric(sv_banCheats->string, &cheatCount);
+  for(int i = 0; i < cheatCount && i < 128; i++) {
+    // set userinfo on all the cheated values
+    svUncheats[i] = CopyString(cheats);
+    cheats = &cheats[strlen(cheats)+1];
+  }
+  sv_banCheats->modified = qfalse;
+}
+#endif
+
+
 /*
 ===============
 SV_Init
@@ -761,13 +775,7 @@ void SV_Init( void )
   // TODO: set default to all client values with CVAR_CHEAT
   sv_banCheats = Cvar_Get("sv_banCheats", "", CVAR_ARCHIVE | CVAR_USERINFO);
   Cvar_SetDescription(sv_banCheats, "Ban specific cheat values allowed by cl_uncheat setting\ne.g. cg_fov used to see behind you\nDefault: empty");
-  int cheatCount;
-  char *cheats = Cmd_TokenizeAlphanumeric(sv_banCheats->string, &cheatCount);
-  for(int i = 0; i < cheatCount && i < 128; i++) {
-    // set userinfo on all the cheated values
-    svUncheats[i] = CopyString(cheats);
-    cheats = &cheats[strlen(cheats)+1];
-  }
+  SV_InitBanCheats();
 #endif
 
 #ifdef USE_BANS
