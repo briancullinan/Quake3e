@@ -927,6 +927,21 @@ void Cvar_SetCheatState(void)
 	{
 		if(var->flags & CVAR_CHEAT)
 		{
+#ifndef DEDICATED
+#ifdef USE_CVAR_UNCHEAT
+      qboolean found = qfalse;
+      for(int i = 0; i < ARRAY_LEN(clUncheats); i++) {
+        if(clUncheats[i] == var) {
+          var->flags &= ~CVAR_CHEAT;
+          var->flags |= CVAR_USERINFO;
+          //var->flags |= CVAR_UNCHEATED;
+          found = qtrue;
+          break;
+        }
+      }
+      if(found) continue;
+#endif
+#endif
 			// the CVAR_LATCHED|CVAR_CHEAT vars might escape the reset here 
 			// because of a different var->latchedString
 			if (var->latchedString)
